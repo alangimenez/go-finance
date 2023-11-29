@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 )
 
 // Respuesta JSON para el GET
@@ -13,13 +14,18 @@ type GetResponse struct {
 }
 
 func main() {
+	// Configurar puerto
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	// Configurar los manejadores para los endpoints
 	http.HandleFunc("/handler", handler)
 
 	// Iniciar el servidor en el puerto 5050
-	port := 5050
-	fmt.Printf("Servidor escuchando en el puerto %d...\n", port)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	fmt.Printf("Servidor escuchando en el puerto %s...\n", port)
+	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
 	if err != nil {
 		fmt.Println("Error al iniciar el servidor:", err)
 	}
