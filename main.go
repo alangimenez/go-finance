@@ -1,12 +1,19 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Respuesta JSON para el GET
@@ -16,6 +23,11 @@ type GetResponse struct {
 }
 
 func main() {
+	errEnv := godotenv.Load("config.env")
+	if errEnv != nil {
+		fmt.Println("Error cargando el archivo de configuración:", errEnv)
+		return
+	}
 	// Configurar puerto
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -59,6 +71,8 @@ func handleGet(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Diferencia en días entre %v y %v: %d días\n", fecha1, fecha2, diferencia)
 
+	connectToMongo()
+
 	// Codificar la respuesta como JSON
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(response)
@@ -78,6 +92,7 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tir := calcularTIR(postData.Message) * 100
+	// connectToMongo()
 
 	// Procesar los datos
 	fmt.Fprintf(w, "Handler POST en /handler. Mensaje recibido. Tir calculada: %0.2f%%\n", tir)
@@ -168,4 +183,67 @@ func diferenciaEnDias(fecha1, fecha2 time.Time) int {
 	diferencia := diferenciaEnDias(fecha1, fecha2)
 
 	fmt.Printf("Diferencia en días entre %v y %v: %d días\n", fecha1, fecha2, diferencia) */
+}
+
+func connectToMongo() {
+	// Establecer información de conexión
+	uri, present := os.LookupEnv("MONGO_DB_URI")
+	if !present {
+		fmt.Printf("No esta definido el URI de Mongo.")
+		return
+	}
+	clientOptions := options.Client().ApplyURI(uri)
+
+	// Crear un cliente de MongoDB
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Comprobar la conexión
+	err = client.Ping(context.Background(), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Conexión a MongoDB establecida.")
+
+	// Obtener una referencia a la colección
+	collection := client.Database("investment-project").Collection("accounts")
+
+	// Consultar todos los documentos en la colección
+	cursor, err := collection.Find(context.TODO(), bson.D{{"name", "Lacteos"}})
+	if err != nil {
+		// log.Fatal("Aca es el error")
+		log.Fatal(err)
+	}
+	defer cursor.Close(context.Background())
+
+	// Recorrer los documentos y mostrarlos
+	var personas []Account
+	for cursor.Next(context.Background()) {
+		var persona Account
+		err := cursor.Decode(&persona)
+		if err != nil {
+			log.Fatal(err)
+		}
+		personas = append(personas, persona)
+	}
+	fmt.Println("Documentos en la colección:")
+	fmt.Println(personas)
+
+	// Desconectar el cliente
+	err = client.Disconnect(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Conexión a MongoDB cerrada.")
+}
+
+type Account struct {
+	Name      string
+	Type      string
+	Balance   float64
+	Currency  string
+	AssetType string
+	Ticket    string
 }
