@@ -12,6 +12,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -64,13 +65,6 @@ func handleGet(w http.ResponseWriter, r *http.Request) {
 		Value: 0.0,
 	}
 
-	fecha1 := time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC)
-	fecha2 := time.Date(2022, time.February, 1, 0, 0, 0, 0, time.UTC)
-
-	diferencia := diferenciaEnDias(fecha1, fecha2)
-
-	fmt.Printf("Diferencia en días entre %v y %v: %d días\n", fecha1, fecha2, diferencia)
-
 	connectToMongo()
 
 	// Codificar la respuesta como JSON
@@ -111,6 +105,13 @@ func calcularNPV(tasaDescuento float64, cashFlow []float64) float64 {
 	var calculatedValuesWithInitialPayment []float64
 	calculatedValuesWithInitialPayment = append([]float64{cashFlow[0]}, calculatedValues...)
 
+	fmt.Printf("Array de calcularNPV \n")
+	for pos, value := range calculatedValuesWithInitialPayment {
+		if value != 0 {
+			fmt.Printf("Pos %d, value %f \n", pos, value)
+		}
+	}
+
 	sumatoria := 0.0
 	for _, valor := range calculatedValuesWithInitialPayment {
 		sumatoria += valor
@@ -139,11 +140,11 @@ func calcularTIRInterpolacion(tasaDescuentoInferior, tasaDescuentoSuperior float
 
 func calcularTIR(cashFlow []float64) float64 {
 	// Definir tasas de descuento inicial y final
-	tasaDescuentoInferior := 0.05
-	tasaDescuentoSuperior := 0.1
+	tasaDescuentoInferior := 0.0711
+	tasaDescuentoSuperior := 0.2
 
 	// Iterar hasta alcanzar la convergencia deseada
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 1; i++ {
 		tasaDescuentoInterpolada := calcularTIRInterpolacion(tasaDescuentoInferior, tasaDescuentoSuperior, cashFlow)
 
 		npvInterpolado := calcularNPV(tasaDescuentoInterpolada, cashFlow)
@@ -156,7 +157,7 @@ func calcularTIR(cashFlow []float64) float64 {
 		}
 
 		// Verificar convergencia
-		if math.Abs(npvInterpolado) < 0.0001 {
+		if math.Abs(npvInterpolado) < 5 {
 			return tasaDescuentoInterpolada
 		}
 	}
@@ -208,10 +209,10 @@ func connectToMongo() {
 	fmt.Println("Conexión a MongoDB establecida.")
 
 	// Obtener una referencia a la colección
-	collection := client.Database("investment-project").Collection("accounts")
+	collection := client.Database("investment-project").Collection("cashflows")
 
 	// Consultar todos los documentos en la colección
-	cursor, err := collection.Find(context.TODO(), bson.D{{"name", "Lacteos"}})
+	cursor, err := collection.Find(context.TODO(), bson.D{{"ticket", "RUC5D"}})
 	if err != nil {
 		// log.Fatal("Aca es el error")
 		log.Fatal(err)
@@ -226,10 +227,30 @@ func connectToMongo() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		fmt.Println(time.Parse("2006/01/02", persona.Start))
 		personas = append(personas, persona)
 	}
 	fmt.Println("Documentos en la colección:")
 	fmt.Println(personas)
+
+	array := createArray(personas[0].Finish)
+	arrayTwo := addPaymentsToArray(personas[0].DateInterest, personas[0].AmountInterest, array)
+	if arrayTwo == nil {
+		fmt.Printf("hola")
+	}
+	for pos, value := range arrayTwo {
+		if value != 0 {
+			fmt.Printf("Pos %d, value %f \n", pos, value)
+		}
+	}
+	/* tir := calcularTIR(arrayTwo)
+	tirAnual := tasaEfectivaAnual(tir / 100)
+	fmt.Printf("La tir es de %0.2f", tirAnual) */
+
+	// cashflow := []float64{-10000.0, 5000.0, 9000.0}
+	tir := calculoTirByInterpolation(arrayTwo)
+	tirAnual := tasaEfectivaAnual(tir)
+	fmt.Printf("La tirAnual es de %f", tirAnual)
 
 	// Desconectar el cliente
 	err = client.Disconnect(context.Background())
@@ -240,10 +261,72 @@ func connectToMongo() {
 }
 
 type Account struct {
-	Name      string
-	Type      string
-	Balance   float64
-	Currency  string
-	AssetType string
-	Ticket    string
+	Company        string
+	Start          string
+	Finish         string
+	Rate           primitive.Decimal128 `bson:"Rate"`
+	DateInterest   []string
+	AmountInterest []float64
+	Ticket         string
+}
+
+func createArray(endDate string) []float64 {
+	parsedEndTime := parseDate(endDate)
+	length := diferenciaEnDias(time.Now(), parsedEndTime)
+	var array []float64
+	for i := 0; i < length; i++ {
+		array = append(array, 0)
+	}
+	return array
+}
+
+func addPaymentsToArray(paymentDays []string, paymentAmounts, array []float64) []float64 {
+	for i := 0; i < len(paymentDays); i++ {
+		parsedEndTime := parseDate(paymentDays[i])
+		diffDays := diferenciaEnDias(time.Now(), parsedEndTime)
+		if diffDays > 0 {
+			array[diffDays-1] = paymentAmounts[i]
+		}
+	}
+	array[0] = -103.70
+	return array
+}
+
+func parseDate(date string) time.Time {
+	parsedEndTime, err := time.Parse("2006/01/02", date)
+	if err != nil {
+		fmt.Printf("Error parseando %s a time.Time", date)
+	}
+	return parsedEndTime
+}
+
+func tasaEfectivaAnual(tasaEfectivaDiaria float64) float64 {
+	// Convertir la tasa efectiva diaria a anual
+	tea := math.Pow(1+tasaEfectivaDiaria, 365) - 1
+	return tea
+}
+
+func calculoTirByInterpolation(cashflow []float64) float64 {
+	rate := 0.000001
+	var tir float64
+	for {
+		previousNpv := calcularNPV(rate-0.000001, cashflow)
+		actualNPV := calcularNPV(rate, cashflow)
+		if previousNpv >= 0.0 && actualNPV < 0.0 {
+			fmt.Printf("npvPositivo %f \n", previousNpv)
+			fmt.Printf("npvPositivo %f \n", actualNPV)
+			fmt.Printf("tasa previa %f", rate-0.000001)
+			fmt.Printf("tasa actual %f", rate)
+			tir = interpolation(rate, previousNpv, actualNPV)
+			break
+		} else {
+			rate += 0.000001
+		}
+	}
+	return tir
+}
+
+func interpolation(rate, npvPositive, npvNegative float64) float64 {
+	previousRate := rate - 0.000001
+	return previousRate + ((rate - previousRate) * (npvPositive / (npvPositive - npvNegative)))
 }
