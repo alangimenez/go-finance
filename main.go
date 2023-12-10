@@ -212,7 +212,7 @@ func connectToMongo() {
 	collection := client.Database("investment-project").Collection("cashflows")
 
 	// Consultar todos los documentos en la colección
-	cursor, err := collection.Find(context.TODO(), bson.D{{"ticket", "RUC5D"}})
+	cursor, err := collection.Find(context.TODO(), bson.D{{"ticket", "Test 202312101819"}})
 	if err != nil {
 		// log.Fatal("Aca es el error")
 		log.Fatal(err)
@@ -227,14 +227,19 @@ func connectToMongo() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(time.Parse("2006/01/02", persona.Start))
+		// fmt.Println(time.Parse("2006/01/02", persona.Start))
 		personas = append(personas, persona)
 	}
 	fmt.Println("Documentos en la colección:")
 	fmt.Println(personas)
 
 	array := createArray(personas[0].Finish)
-	arrayTwo := addPaymentsToArray(personas[0].DateInterest, personas[0].AmountInterest, array)
+	arrayTwo := addPaymentsToArray(
+		personas[0].DateOfPayment,
+		personas[0].AmountInterest,
+		personas[0].AmountAmortization,
+		array,
+	)
 	if arrayTwo == nil {
 		fmt.Printf("hola")
 	}
@@ -261,18 +266,19 @@ func connectToMongo() {
 }
 
 type Account struct {
-	Company        string
-	Start          string
-	Finish         string
-	Rate           primitive.Decimal128 `bson:"Rate"`
-	DateInterest   []string
-	AmountInterest []float64
-	Ticket         string
+	Company            string
+	Start              time.Time
+	Finish             time.Time
+	Rate               primitive.Decimal128 `bson:"Rate"`
+	DateOfPayment      []time.Time
+	AmountInterest     []float64
+	AmountAmortization []float64
+	Ticket             string
 }
 
-func createArray(endDate string) []float64 {
-	parsedEndTime := parseDate(endDate)
-	length := diferenciaEnDias(time.Now(), parsedEndTime)
+func createArray(endDate time.Time) []float64 {
+	// parsedEndTime := parseDate(endDate)
+	length := diferenciaEnDias(time.Now(), endDate)
 	var array []float64
 	for i := 0; i < length; i++ {
 		array = append(array, 0)
@@ -280,15 +286,15 @@ func createArray(endDate string) []float64 {
 	return array
 }
 
-func addPaymentsToArray(paymentDays []string, paymentAmounts, array []float64) []float64 {
+func addPaymentsToArray(paymentDays []time.Time, paymentInterest, paymentAmortization, array []float64) []float64 {
 	for i := 0; i < len(paymentDays); i++ {
-		parsedEndTime := parseDate(paymentDays[i])
-		diffDays := diferenciaEnDias(time.Now(), parsedEndTime)
+		// parsedEndTime := parseDate(paymentDays[i])
+		diffDays := diferenciaEnDias(time.Now(), paymentDays[i])
 		if diffDays > 0 {
-			array[diffDays-1] = paymentAmounts[i]
+			array[diffDays-1] = paymentInterest[i] + paymentAmortization[i]
 		}
 	}
-	array[0] = -103.70
+	array[0] = -100.00
 	return array
 }
 
