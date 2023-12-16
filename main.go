@@ -212,7 +212,7 @@ func connectToMongo() {
 	collection := client.Database("investment-project").Collection("cashflows")
 
 	// Consultar todos los documentos en la colección
-	cursor, err := collection.Find(context.TODO(), bson.D{{"ticket", "Test 202312101819"}})
+	cursor, err := collection.Find(context.TODO(), bson.D{})
 	if err != nil {
 		// log.Fatal("Aca es el error")
 		log.Fatal(err)
