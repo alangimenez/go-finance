@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
+	// "github.com/joho/godotenv"
 	"github.com/rs/cors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -44,14 +44,23 @@ type Dolars struct {
 }
 
 func main() {
-	errEnv := godotenv.Load("config.env")
+	/* errEnv := godotenv.Load("config.env")
 	if errEnv != nil {
 		fmt.Println("Error cargando el archivo de configuración:", errEnv)
 		return
-	}
+	} */
+
+	// Configurar CORS middleware con opciones específicas
+	corsOptions := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},                              // Origen permitido (ajusta según tu necesidad)
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS", "HEAD"}, // Métodos permitidos
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},  // Encabezados permitidos
+		AllowCredentials: true,                                       // Permitir credenciales (cookies, autenticación, etc.)
+		Debug:            true,                                       // Habilitar modo de depuración
+	})
 
 	// Configurar CORS middleware
-	corsHandler := cors.Default().Handler(http.DefaultServeMux)
+	corsHandler := corsOptions.Handler(http.DefaultServeMux)
 
 	// Configurar puerto
 	port := os.Getenv("PORT")
