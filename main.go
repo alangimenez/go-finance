@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -48,6 +49,10 @@ func main() {
 		fmt.Println("Error cargando el archivo de configuración:", errEnv)
 		return
 	}
+
+	// Configurar CORS middleware
+	corsHandler := cors.Default().Handler(http.DefaultServeMux)
+
 	// Configurar puerto
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -59,7 +64,7 @@ func main() {
 
 	// Iniciar el servidor en el puerto 5050
 	fmt.Printf("Servidor escuchando en el puerto %s...\n", port)
-	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%s", port), corsHandler)
 	if err != nil {
 		fmt.Println("Error al iniciar el servidor:", err)
 	}
