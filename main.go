@@ -22,11 +22,13 @@ import (
 type GetResponse struct {
 	Key   string  `json:"Key"`
 	Value float64 `json:"Value"`
+	Price float64 `json:"Price"`
 }
 
 type Bond struct {
 	Simbolo      string
 	UltimoPrecio float64
+	Moneda       string
 }
 
 type Quotes struct {
@@ -264,7 +266,7 @@ func connectToMongo() []GetResponse {
 	fmt.Println(personas)
 
 	collectionValues := client.Database("investment-project").Collection("lastvalues")
-	filter := bson.D{{Key: "name", Value: "final"}}
+	filter := bson.D{}
 
 	result := collectionValues.FindOne(context.TODO(), filter)
 	if result.Err() != nil {
@@ -319,6 +321,7 @@ func connectToMongo() []GetResponse {
 		response := GetResponse{
 			Key:   bond.Ticket,
 			Value: tirAnual,
+			Price: actualPrice,
 		}
 		responses = append(responses, response)
 	}
@@ -409,7 +412,7 @@ func interpolation(rate, npvPositive, npvNegative float64) float64 {
 func getActualPrice(quotesList []Bond, ticket string, mep float64) (float64, error) {
 	fmt.Printf("dolar mep %f", mep)
 	for _, p := range quotesList {
-		if p.Simbolo == ticket && ticket == "PMM29" {
+		if p.Simbolo == ticket && (p.Moneda == "1" || p.Moneda == "AR$") {
 			return p.UltimoPrecio / mep, nil
 		}
 		if p.Simbolo == ticket {
