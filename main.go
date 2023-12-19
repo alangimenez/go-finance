@@ -390,6 +390,8 @@ func calculoTirByInterpolation(cashflow []float64) float64 {
 	for {
 		previousNpv := calcularNPV(rate-0.000001, cashflow)
 		actualNPV := calcularNPV(rate, cashflow)
+		previousNpvNegative := calcularNPV(-rate+0.000001, cashflow)
+		actualNPVNegative := calcularNPV(-rate, cashflow)
 		if previousNpv >= 0.0 && actualNPV < 0.0 {
 			fmt.Printf("npvPositivo %f \n", previousNpv)
 			fmt.Printf("npvPositivo %f \n", actualNPV)
@@ -397,9 +399,16 @@ func calculoTirByInterpolation(cashflow []float64) float64 {
 			fmt.Printf("tasa actual %f", rate)
 			tir = interpolation(rate, previousNpv, actualNPV)
 			break
-		} else {
-			rate += 0.000001
 		}
+		if previousNpvNegative <= 0.0 && actualNPVNegative > 0.0 {
+			fmt.Printf("npvPositivo %f \n", previousNpvNegative)
+			fmt.Printf("npvPositivo %f \n", actualNPVNegative)
+			fmt.Printf("tasa previa %f", -rate+0.000001)
+			fmt.Printf("tasa actual %f", -rate)
+			tir = interpolation(-rate, previousNpvNegative, actualNPVNegative)
+			break
+		}
+		rate += 0.000001
 	}
 	return tir
 }
