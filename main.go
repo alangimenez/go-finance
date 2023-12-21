@@ -291,6 +291,10 @@ func connectToMongo() []GetResponse {
 		if errActualPrice != nil {
 			fmt.Printf("Error obteniendo el precio actual de %s \n", bond.Ticket)
 		}
+		if actualPrice == 0.0 {
+			fmt.Printf("El precio del bono %s es 0", bond.Ticket)
+			continue
+		}
 		fmt.Printf("Para bono %s precio %f", bond.Ticket, actualPrice)
 
 		arrayTwo := addPaymentsToArray(
