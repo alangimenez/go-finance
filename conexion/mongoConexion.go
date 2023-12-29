@@ -2,38 +2,39 @@ package conexion
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"os"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func EstablecerConexion() (*mongo.Client, error) {
-	mongoURI, err := getURi()
+func EstablecerConexion() *mongo.Client {
+	mongoURI := getURi()
 	clientOptions := options.Client().ApplyURI(mongoURI)
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		return nil, err
+	client, errConnect := mongo.Connect(context.Background(), clientOptions)
+	if errConnect != nil {
+		log.Fatal(errConnect)
 	}
 
-	return client, nil
-}
-
-func getURi() (string, error) {
-	uri, present := os.LookupEnv("MONGO_DB_URI")
-	if !present {
-		return "", errors.New("no está definido el URI de mongo")
-	}
-	return uri, nil
-}
-
-func CheckConection(client *mongo.Client) {
-	err := client.Ping(context.Background(), nil)
-	if err != nil {
-		log.Fatal(err)
+	errPing := client.Ping(context.Background(), nil)
+	if errPing != nil {
+		log.Fatal(errPing)
 	}
 	fmt.Println("Conexión a MongoDB establecida.")
+
+	return client
+}
+
+var Client *mongo.Client = EstablecerConexion()
+
+func getURi() string {
+	// Load environment configs
+	errEnv := godotenv.Load("config.env")
+	if errEnv != nil {
+		fmt.Println("Error cargando el archivo de configuración:", errEnv)
+	}
+	return os.Getenv("MONGO_DB_URI")
 }
