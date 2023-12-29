@@ -1,4 +1,4 @@
-module github.com/alangimenez/go-finance
+module gofinance
 
 go 1.21
 

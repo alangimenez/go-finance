@@ -4,18 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"gofinance/conexion"
 	"log"
 	"math"
 	"net/http"
 	"os"
 	"time"
 
-	// "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Respuesta JSON para el GET
@@ -46,11 +45,11 @@ type Dolars struct {
 }
 
 func main() {
-	/* errEnv := godotenv.Load("config.env")
+	errEnv := godotenv.Load("config.env")
 	if errEnv != nil {
 		fmt.Println("Error cargando el archivo de configuración:", errEnv)
 		return
-	} */
+	}
 
 	// Configurar CORS middleware con opciones específicas
 	corsOptions := cors.New(cors.Options{
@@ -72,6 +71,7 @@ func main() {
 
 	// Configurar los manejadores para los endpoints
 	http.HandleFunc("/handler", handler)
+	http.HandleFunc("/tir/price", calculateTirWithGivenPrice)
 
 	// Iniciar el servidor en el puerto 5050
 	fmt.Printf("Servidor escuchando en el puerto %s...\n", port)
@@ -105,6 +105,18 @@ func handleGet(w http.ResponseWriter, r *http.Request) {
 	// Codificar la respuesta como JSON
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(responsesList)
+	if err != nil {
+		http.Error(w, "Error al codificar la respuesta JSON", http.StatusInternalServerError)
+		return
+	}
+}
+
+func calculateTirWithGivenPrice(w http.ResponseWriter, r *http.Request) {
+	response := "hola"
+
+	// Codificar la respuesta como JSON
+	w.Header().Set("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "Error al codificar la respuesta JSON", http.StatusInternalServerError)
 		return
@@ -215,7 +227,7 @@ func diferenciaEnDias(fecha1, fecha2 time.Time) int {
 }
 
 func connectToMongo() []GetResponse {
-	// Establecer información de conexión
+	/* // Establecer información de conexión
 	uri, present := os.LookupEnv("MONGO_DB_URI")
 	if !present {
 		fmt.Printf("No esta definido el URI de Mongo.")
@@ -234,7 +246,13 @@ func connectToMongo() []GetResponse {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Conexión a MongoDB establecida.")
+	fmt.Println("Conexión a MongoDB establecida.") */
+
+	client, err := conexion.EstablecerConexion()
+	if err != nil {
+		fmt.Errorf("La conexion no pudo ser establecida")
+	}
+	conexion.CheckConection(client)
 
 	// Obtener una referencia a la colección
 	collection := client.Database("investment-project").Collection("cashflows")
