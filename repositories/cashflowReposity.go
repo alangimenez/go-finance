@@ -13,7 +13,7 @@ import (
 var cashflowCollection *mongo.Collection = conexion.Client.Database("investment-project").Collection("cashflows")
 
 func GetAllCashflowsWithTickets() ([]model.Cashflow, []string) {
-	excludedBonds := []string{"Test 202312101819"}
+	excludedBonds := []string{"Test 202312101819", "MRECD"}
 
 	// Consultar todos los documentos en la colección
 	cursor, err := cashflowCollection.Find(context.TODO(), bson.D{{Key: "ticket", Value: bson.D{{Key: "$nin", Value: excludedBonds}}}})
