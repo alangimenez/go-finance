@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"gofinance/conexion"
 	"gofinance/model"
 	"log"
@@ -35,4 +37,20 @@ func GetAllCashflowsWithTickets() ([]model.Cashflow, []string) {
 	}
 
 	return cashflows, tickets
+}
+
+func GetCashflowByTicket(ticket string) (model.Cashflow, error) {
+	filter := bson.M{"ticket": ticket}
+	var cashflow model.Cashflow
+	var err = cashflowCollection.FindOne(context.Background(), filter).Decode(&cashflow)
+	if err == mongo.ErrNoDocuments {
+		message := fmt.Sprintf("The cashflow for the ticket %s does not exist", ticket)
+		fmt.Print(message)
+		return cashflow, errors.New(message)
+	} else if err != nil {
+		log.Fatal(err)
+		return cashflow, err
+	} else {
+		return cashflow, nil
+	}
 }

@@ -67,6 +67,25 @@ func GetTirs() []responses.TirResponse {
 	return listOfTirResponse
 }
 
+func CalculateTirWithGivenPrice(price float64, ticket string) (float64, error) {
+	cashflow, err := repositories.GetCashflowByTicket(ticket)
+	if err != nil {
+		return 0.0, err
+	}
+
+	array := createArray(cashflow.Finish)
+	secondArray := addPaymentsToArray(
+		cashflow.DateOfPayment,
+		cashflow.AmountInterest,
+		cashflow.AmountAmortization,
+		array,
+		price,
+	)
+	tir := calculoTirByInterpolation(secondArray)
+	tirAnual := tasaEfectivaAnual(tir)
+	return tirAnual, nil
+}
+
 func createArray(endDate time.Time) []float64 {
 	fmt.Printf("The endDate is %s", endDate)
 	// parsedEndTime := parseDate(endDate)
