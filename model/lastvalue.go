@@ -4,6 +4,7 @@ type Bond struct {
 	Simbolo      string
 	UltimoPrecio float64
 	Moneda       string
+	Type         string
 }
 
 type Quotes struct {

@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"gofinance/services"
 	"net/http"
+	"strings"
 )
 
 func GetTirs(w http.ResponseWriter, r *http.Request) {
@@ -42,4 +44,32 @@ func CalculateTirWithGivenPrice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error al codificar la respuesta JSON", http.StatusInternalServerError)
 		return
 	}
+}
+
+func RetrieveQuotesByAssetType(w http.ResponseWriter, r *http.Request) {
+	assetType, err := getAssetType(r.URL.Path)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	quotes := services.GetQuotesByAssetType(assetType)
+	w.Header().Set("Content-Type", "application/json")
+	errEncode := json.NewEncoder(w).Encode(quotes)
+	if errEncode != nil {
+		http.Error(w, "Error al codificar la respuesta JSON", http.StatusInternalServerError)
+		return
+	}
+}
+
+func getAssetType(path string) (string, error) {
+	// Eliminar la parte "/users/" para obtener el ID del usuario
+	id := strings.TrimPrefix(path, "/quotes/")
+
+	// Validar que el ID no esté vacío
+	if id == "" {
+		return "AssetType is required", errors.New("assetType is not present")
+	}
+
+	return id, nil
 }
