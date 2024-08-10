@@ -8,6 +8,7 @@ import (
 func TirRoutes() {
 	http.HandleFunc("/tir", tir)
 	http.HandleFunc("/tir/price", calculateTirWithGivenPrice)
+	http.HandleFunc("/quotes/", retrieveQuotesByAssetType)
 }
 
 func tir(w http.ResponseWriter, r *http.Request) {
@@ -23,6 +24,15 @@ func calculateTirWithGivenPrice(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		controllers.CalculateTirWithGivenPrice(w, r)
+	default:
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+	}
+}
+
+func retrieveQuotesByAssetType(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		controllers.RetrieveQuotesByAssetType(w, r)
 	default:
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 	}
